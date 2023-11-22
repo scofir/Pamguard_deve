@@ -26,13 +26,13 @@ import pamMaths.PamVector;
 
 /**
  * Hyperbolic localisation using methods described in 
- * Gillette, M. D., and Silverman, H. F. (2008). �A linear closed-form algorithm for source localization from time-differences of arrival,� IEEE Signal Processing Letters, 15, 1�4.<p>
+ * Gillette, M. D., and Silverman, H. F. (2008). �A linear closed-form algorithm for source localization from time-differences of arrival,� IEEE Signal Processing Letters, 15, 1�4.<p>
  * 
- * Also worth reading Spiesberger, J. L. (2001). �Hyperbolic location errors due to insufficient numbers of receivers,� The Journal of the Acoustical Society of America, 109, 3076�3079.
+ * Also worth reading Spiesberger, J. L. (2001). �Hyperbolic location errors due to insufficient numbers of receivers,� The Journal of the Acoustical Society of America, 109, 3076�3079.
  * which gives a clearer explanation of why at least 4 recievers are needed for 2D localisation and 5 for 3D localisation.<p>
  * Worth noting that the equations derived in Gillette 2008 are functionally identical to those in Spiesberger 2001 and an earlier work by Speisberger and Fristrup:<br>
- * Spiesberger, J. L., and Fristrup, K. M. (1990). �Passive localization of calling animals and sensing of their acoustic environment using acoustic tomography,� 
- * The american naturalist, 135, 107�153.
+ * Spiesberger, J. L., and Fristrup, K. M. (1990). �Passive localization of calling animals and sensing of their acoustic environment using acoustic tomography,� 
+ * The american naturalist, 135, 107�153.
  *  
  * @author Doug Gillespie
  *
@@ -49,7 +49,7 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 
 	@Override
 	public AbstractLocalisation processTOADs(PamDataUnit groupDataUnit, SnapshotGeometry geometry, TOADInformation toadInformation) {
-		int shape = geometry.getShape();
+		int shape = geometry.getShape(); // 根据阵列类型选择该定位算法的实现
 		switch (shape) {
 		case ArrayManager.ARRAY_TYPE_LINE:
 			return processTOADs2D(groupDataUnit, geometry, toadInformation);
@@ -80,9 +80,9 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 		
 		Matrix axesMatrix = PamVector.arrayToMatrix(rotationVectors);
 		PamVector[] geom3d = geometry.getGeometry();
-		Matrix geomMatrix = PamVector.arrayToMatrix(geom3d);
+		Matrix geomMatrix = PamVector.arrayToMatrix(geom3d); // 各个阵元的三维坐标
 		// now rotate the geometry by the axes matrix ...
-		Matrix flatGeom = geomMatrix.times(axesMatrix.inverse());
+		Matrix flatGeom = geomMatrix.times(axesMatrix.inverse()); // 旋转后的阵列坐标
 		/*
 		 *  check that the z dimension is zero ...
 		 *  Should be able to comment this out after debugging. 
@@ -102,7 +102,7 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 		
 //		PamVector[] geom = geometry.getGeometry();
 		PamVector[] geom = new PamVector[flatGeom.getRowDimension()];
-		double[][] geomData = flatGeom.getArray();
+		double[][] geomData = flatGeom.getArray(); // 阵元坐标 维度（4，3）
 		double xt = 0, yt = 0; 
 		for (int i = 0; i < geom.length; i++) {
 			geom[i] = new PamVector(geomData[i]);
@@ -118,8 +118,8 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 		int nPhones = delays.length;
 		int nPairs = nPhones*(nPhones-1)/2;
 		boolean[] goodRow = new boolean[nPairs];
-		int nCols = 2+nPhones-1;
-		double[][] left = new double[nPairs][nCols];
+		int nCols = 2+nPhones-1;  // 2是指xy的坐标，nPhones-1是指参考阵元的个数
+		double[][] left = new double[nPairs][nCols];   // 首先构建left right rightPlusErr矩阵
 		double[][] right = new double[nPairs][1];
 		double[][] rightPlusErr = new double[nPairs][1];
 		double[] scale = new double[nPairs];
@@ -129,25 +129,25 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 		for (int i = 0; i < nPhones; i++) {
 			for (int j = i+1; j < nPhones; j++, iPair++) {
 				double delay = -delays[i][j];
-				PamVector geomi = geom[hydrophones[i]];
+				PamVector geomi = geom[hydrophones[i]]; // 获取相邻两阵元的坐标
 				PamVector geomj = geom[hydrophones[j]];
 				if (Double.isNaN(delay) || geomi == null || geomj == null) {
 					continue;
 				}
 				delay *= c;
-				right[iPair][0] = Math.pow(delay, 2);
+				right[iPair][0] = Math.pow(delay, 2); // 填充右矩阵  (delay*c)^2,仍未完成，后续还会加上另一项 
 				if (delayErrors != null) {
 					delayErr = delayErrors[i][j]*c;
 				}
 				else {
 					delayErr = 0;
 				}
-				rightPlusErr[iPair][0] = Math.pow(delay+delayErr, 2);
+				rightPlusErr[iPair][0] = Math.pow(delay+delayErr, 2); // 填充 加上误差后的右矩阵
 				double l = 0;
-				for (int d = 0; d < 2; d++) {
+				for (int d = 0; d < 2; d++) { // d<2是因为只关注x,y平面的二维
 					l += Math.abs(geomi.getCoordinate(d)-geomj.getCoordinate(d)); // total distance between phones, to check not zero
-					left[iPair][d] = geomi.getCoordinate(d)-geomj.getCoordinate(d); // first two cols of left matrix
-					right[iPair][0] += (Math.pow(geomi.getCoordinate(d)-centre.getCoordinate(d), 2) - Math.pow(geomj.getCoordinate(d)-centre.getCoordinate(d), 2));
+					left[iPair][d] = geomi.getCoordinate(d)-geomj.getCoordinate(d); // first two cols of left matrix  左矩阵的前两列填充 阵元坐标差值
+					right[iPair][0] += (Math.pow(geomi.getCoordinate(d)-centre.getCoordinate(d), 2) - Math.pow(geomj.getCoordinate(d)-centre.getCoordinate(d), 2)); // 右矩阵继续加上 关于阵元中心的差的平方
 					rightPlusErr[iPair][0] += (Math.pow(geomi.getCoordinate(d)-centre.getCoordinate(d), 2) - Math.pow(geomj.getCoordinate(d)-centre.getCoordinate(d), 2));
 					scale[iPair] += Math.pow(geomi.getCoordinate(d)-geomj.getCoordinate(d), 2);
 				}
@@ -157,13 +157,13 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 				}
 				goodRow[iPair] = true;
 				nGoodRows ++;
-				left[iPair][2+i] = delay;
-				right[iPair][0] *= 0.5;
-				rightPlusErr[iPair][0] *= 0.5;
+				left[iPair][2+i] = delay; // 左矩阵的后3列填充delay
+				right[iPair][0] *= 0.5;  
+				rightPlusErr[iPair][0] *= 0.5;  // 三个矩阵填充完毕
 			}
 //			break;
 		}
-		// reduce rows if necessary. 
+		// reduce rows if necessary.  对于满足条件的水听对,标记为有效行
 		double[][] goodLeft = left;
 		double[][] goodRight = right;
 		double[][] goodRightError = rightPlusErr;
@@ -188,7 +188,7 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 		boolean weight = true;
 		if (weight) {
 			for (int i = 0; i < goodLeft.length; i++) {
-				double w = goodScale[i];
+				double w = goodScale[i]; // 对不同pair施加不同权重
 				if (w <= 0) continue;
 				w = 1./Math.sqrt(w);
 				w = 1./w;
@@ -211,9 +211,9 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 //		Matrix answer = leftMatrix.solve(rightMatrix);
 		Matrix answer = null, leftInverse = null, answer2 = null;
 		try {
-			leftInverse = leftMatrix.inverse();
+			leftInverse = leftMatrix.inverse(); // 左矩阵求逆
 //			Debug.out.println("Left inverse rows " + leftInverse.getRowDimension() + ", columns " + leftInverse.getColumnDimension());
-			answer = leftInverse.times(rightMatrix);
+			answer = leftInverse.times(rightMatrix); // 左逆矩阵乘以右矩阵
 //			answer2 = rightMatrix.times(leftInverse.transpose());
 		}
 		catch (Exception e) {
@@ -225,10 +225,10 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 //		Debug.out.println("answer rows = " +  answer.getRowDimension());
 		// get a chi2 value for this location. 
 		double[] posVec = answer.getColumnPackedCopy();
-		posVec = Arrays.copyOf(posVec, 3);
+		posVec = Arrays.copyOf(posVec, 3);  // 本来应该取2，因为answer只有前2个是xy坐标值，后面的值代表声源到参考阵元的距离
 		lastPosVector = posVec;
-		double[][][] dE = {delays, delayErrors};
-		Chi2Data chiData = calcChi2(geometry, toadInformation, posVec);
+		double[][][] dE = {delays, delayErrors}; // 未使用
+		Chi2Data chiData = calcChi2(geometry, toadInformation, posVec); // 计算的卡方值数据并未使用
 		if (chiData.getDegreesOfFreedom() <= 0) {
 			return null;
 		}
@@ -249,7 +249,7 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 			double cond1 = leftMatrix.norm1()*leftInverse.norm1();
 			double errorSscale = (rightPlusErrorMatrix.minus(rightMatrix)).norm1();
 			errorSscale *= cond1;
-			errorSscale /= rightMatrix.norm1();
+			errorSscale /= rightMatrix.norm1(); // 误差估计并未使用
 //			System.out.printf("Error scale = %3.3f\n", errorSscale);
 			
 		}
@@ -261,7 +261,7 @@ public class HyperbolicLocaliser extends TOADBaseAlgorithm {
 
 		double[] pos2d = {centre.getCoordinate(0)+answer.get(0,0), 
 				centre.getCoordinate(1)+answer.get(1, 0), 
-				0};
+				0};  // 获得声源坐标，此处只针对xy平面
 		Matrix posMatrix = new Matrix(pos2d, 1);
 		PamVector posVector = new PamVector(pos2d);
 		/*

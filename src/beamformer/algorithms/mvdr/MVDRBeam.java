@@ -112,7 +112,7 @@ public class MVDRBeam extends BeamInformation {
 	 * @return a ComplexArray[] vector of length numFreqBins.  Each ComplexArray in the vector contains a double[] vector, which
 	 * holds the complex steering value for each hydrophone at that frequency bin
 	 */
-	protected void calcSteeringVec() {
+	protected void calcSteeringVec() { // 计算导向矢量
 		
 		// Calculate the number of frequency bins in the required freq range, based on the fft source params.  The center value
 		// of any frequency bin is (i+0.5)*hzPerBin, where i=index number and hzPerBin = Fs / nfft
@@ -158,7 +158,7 @@ public class MVDRBeam extends BeamInformation {
 
 	/**
 	 * Process a set of FFT Data units.  Note that we may only be processing a portion of the frequency range
-	 * 
+	 *  计算MVDR的功率值，计算是针对每个方位角度和俯仰角的
 	 * @param Rinv array containing one FFTDataUnit for each channel to analyse
 	 * @param startBin the index in the FFTDataUnit to start processing at.
 	 * @param numBins the number of FFT bins to process
@@ -170,14 +170,14 @@ public class MVDRBeam extends BeamInformation {
 	public ComplexArray process(FieldMatrix<Complex>[] Rinv, int startBin, int numBins, int fullNumFFTBins) {
 		
 		// initialise the return array to be large enough to hold the entire frequency range.  If we are only processing
-		// a portion of that range, the other bins will simply be 0
+		// a portion of that range, the other bins will simply be 0  初始化返回数组，使其足够大以容纳整个频率范围。如果只处理该范围的一部分，其他 bin 将简单地为 0。
 		ComplexArray summedData = new ComplexArray(fullNumFFTBins);
 		
 		// loop over the FFT bins
 		for (int fftBin=0; fftBin<numBins; fftBin++) {
 			Complex finalVal = new Complex(0., 0.);
 
-			// calculate the power at this FFT bin, using the formula P=1/(e' * Rinv * e)
+			// calculate the power at this FFT bin, using the formula P=1/(e' * Rinv * e)  计算该 FFT bin 的功率，使用公式 P = 1 / (e' * Rinv * e)
 			ArrayFieldVector<Complex> intermediateVec = new ArrayFieldVector<Complex>(ComplexField.getInstance(), Rinv[fftBin].getColumnDimension());
 			for (int col=0; col<Rinv[fftBin].getColumnDimension(); col++) {
 				intermediateVec.setEntry(col, steeringConj.getRowVector(startBin+fftBin).dotProduct(Rinv[fftBin].getColumnVector(col)));
@@ -192,7 +192,7 @@ public class MVDRBeam extends BeamInformation {
 				finalVal = new Complex(0,0);
 			}
 			else {
-				finalVal = dotProd.reciprocal().sqrt();
+				finalVal = dotProd.reciprocal().sqrt(); // dotProd = e'*(R_-1)*e求倒数并求平方根
 			}
 			if (Double.isNaN(finalVal.abs())) {
 //				FieldVector<Complex> row = steering.getRowVector(startBin+fftBin);
@@ -203,12 +203,12 @@ public class MVDRBeam extends BeamInformation {
 				finalVal = new Complex(0,0);
 			}
 
-			summedData.set(startBin+fftBin, finalVal.getReal(), finalVal.getImaginary() );
+			summedData.set(startBin+fftBin, finalVal.getReal(), finalVal.getImaginary());//将计算的值放在对应频点处
 			
 		}
 		
 		// return the summedData
-		return summedData;
+		return summedData; // 每个频点出存一个复数值，代表该点的功率值（复数）
 	}
 
 	/**

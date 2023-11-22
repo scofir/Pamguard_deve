@@ -72,7 +72,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 		this.useDefaults=true;
 		prepare(arrayElements, timMillis, timingError, Math.toRadians(3), Math.toRadians(3));
 	}
-	
+	// 构建LUT：查找表 ，包括延迟网格和延迟误差网格
 	synchronized private void prepare(int[] arrayElements, long timeMillis, double timingError, double thetaStep, double phiStep) {
 		this.timingError = timingError;
 		this.thetaStep = thetaStep;
@@ -127,12 +127,12 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 			}
 		}
 		
-		nThetaBins = (int) Math.floor((thetaRange[1] - thetaRange[0])/thetaStep)+1;
+		nThetaBins = (int) Math.floor((thetaRange[1] - thetaRange[0])/thetaStep)+1; // 方位角度范围按步长划分的个数
 		if (phiRange[1] == phiRange[0]) {
 			nPhiBins = 1;
 		}
 		else {
-			nPhiBins = (int) Math.floor((phiRange[1] - phiRange[0])/phiStep)+1;
+			nPhiBins = (int) Math.floor((phiRange[1] - phiRange[0])/phiStep)+1; // 俯仰角度范围按步长划分的个数
 		}
 		delayGrid = new double[nThetaBins][nPhiBins][nPairs];
 		delayErrorGrid = new double[nThetaBins][nPhiBins][nPairs];
@@ -149,7 +149,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 			}
 		}
 		/*
-		 * Try to find a pair which is close to the alignment of each
+		 * Try to find a pair which is close to the alignment of each 这段代码未使用
 		 * principle axis. If one can be found, then create a pairBearingLocaliser
 		 * with that pair, and use to do a super rapid calculation of the angles
 		 * to get in the right starting place. 
@@ -158,11 +158,11 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 		pairBearingLocaliserPairs = new int[3];
 		int[] map = new int[2];
 		for (int i = 0; i < arrayAxis.length; i++) {
-			pairBearingLocaliserPairs[i] = findPairLocaliser(arrayAxis[i], timeMillis);
+			pairBearingLocaliserPairs[i] = findPairLocaliser(arrayAxis[i], timeMillis); // 找到离每个坐标轴最近的阵元对向量的npairs索引
 			if (pairBearingLocaliserPairs[i] >= 0) {
-				map[0] = phonePairs[pairBearingLocaliserPairs[i]][0];
+				map[0] = phonePairs[pairBearingLocaliserPairs[i]][0]; // 获取该索引处两个水听器的编号
 				map[1] = phonePairs[pairBearingLocaliserPairs[i]][1];
-				pairBearingLocalisers[i] = new PairBearingLocaliser(map, timeMillis, timingError);
+				pairBearingLocalisers[i] = new PairBearingLocaliser(map, timeMillis, timingError); // 传入二麦线阵定位器初始化
 			}
 		}
 		
@@ -189,11 +189,11 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 			 * taking the vector product of this and any other vector then normalising. 
 			 */
 			// start by changing any non zero elements.
-			rotVectors[1] = rotVectors[0].getPerpendicularVector();
+			rotVectors[1] = rotVectors[0].getPerpendicularVector(); // 寻找与rotVectors[0]垂直的向量
 		}
 //		if (arrayType == ArrayManager.ARRAY_TYPE_PLANE) {
 		if (rotVectors[2] == null) {
-			rotVectors[2] = rotVectors[0].vecProd(rotVectors[1]);
+			rotVectors[2] = rotVectors[0].vecProd(rotVectors[1]); // 寻找与平面垂直的法向量
 		}
 		Matrix rotMatrix = PamVector.arrayToMatrix(rotVectors);
 		try {
@@ -207,7 +207,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 		bearingVector = new PamVector();
 		double theta, phi;
 		double e1, e2, e3, cosAng, pairSeparationError;
-		double sosErrorFactor = speedOfSoundError / speedOfSound / speedOfSound;
+		double sosErrorFactor = speedOfSoundError / speedOfSound / speedOfSound; // 声速误差因子
 		for (int iP = 0; iP < nPairs; iP++) {
 			pV0 = currentArray.getAbsHydrophoneVector(phonePairs[iP][0],timeMillis);
 			pV1 = currentArray.getAbsHydrophoneVector(phonePairs[iP][1],timeMillis);
@@ -216,35 +216,35 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 			}
 			pairVector = pV1.sub(pV0);
 			pairErrorVector = currentArray.getSeparationErrorVector(phonePairs[iP][1], phonePairs[iP][0],timeMillis);
-			pairVector = pairVector.rotate(rotMatrix);
-			pairErrorVector = pairErrorVector.rotate(rotMatrix);
+			pairVector = pairVector.rotate(rotMatrix); // 水听器向量对
+			pairErrorVector = pairErrorVector.rotate(rotMatrix); // 水听器误差向量对
 
 			for (int iT = 0; iT < nThetaBins; iT++) {
 				for (int iPhi = 0; iPhi < nPhiBins; iPhi++) {
 					// create a unit vector along theta / phi
 					theta = thetaBinToAngle(iT);
 					phi = phiBintoAngle(iPhi);
-					bearingVector = PamVector.fromHeadAndSlantR(Math.PI/2.-theta, phi);
+					bearingVector = PamVector.fromHeadAndSlantR(Math.PI/2.-theta, phi); // 构造计算delay所需的向量
 //					bearingVector.setElement(0, Math.cos(theta));
 //					bearingVector.setElement(1, Math.sin(theta)*Math.cos(phi));
 //					bearingVector.setElement(2, Math.sin(theta)*Math.sin(phi));
-					delayGrid[iT][iPhi][iP] = -bearingVector.dotProd(pairVector)/speedOfSound;
+					delayGrid[iT][iPhi][iP] = -bearingVector.dotProd(pairVector)/speedOfSound; // 延迟网格，存储了每个角度和npair处的延迟
 					/*
 					 * Now the error on the delay. 
 					 */
 					cosAng = bearingVector.dotProd(pairVector.getUnitVector());
-					e1 = pairErrorVector.sumComponentsSquared(bearingVector) / speedOfSound;
-					e2 = pairVector.dotProd(bearingVector) * sosErrorFactor;
-					e3 = timingError;
-					delayErrorGrid[iT][iPhi][iP] = Math.sqrt(e1*e1 + e2*e2 + e3*e3);
+					e1 = pairErrorVector.sumComponentsSquared(bearingVector) / speedOfSound; // 计算位置误差相对延迟的贡献e1
+					e2 = pairVector.dotProd(bearingVector) * sosErrorFactor; // 计算声速误差对延迟的影响e2
+					e3 = timingError; // 定时误差e3
+					delayErrorGrid[iT][iPhi][iP] = Math.sqrt(e1*e1 + e2*e2 + e3*e3); // 延迟误差网格
 //					delayErrorGrid[iT][iPhi][iP] = e1;
 				}
 			}
 		}
 		long nanoEnd = SystemTiming.getProcessCPUTime();
 //		System.out.println(String.format("LUT Creation time %3.2f microseconds", (nanoEnd-nanosStart)/1000.));
-		
-		initialiseLLLut();
+
+		initialiseLLLut(); // 初始化似然值查找表 likelihoodLUT = new double[nThetaBins][nPhiBins];
 	}
 	
 	/**
@@ -253,7 +253,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	 * @param pamVector
 	 * @return
 	 */
-	private int findPairLocaliser(PamVector pamVector, long timeMillis) {
+	private int findPairLocaliser(PamVector pamVector, long timeMillis) { // 找到离每个坐标轴最近的阵元对向量的npairs索引
 		double angle;
 		PamVector pairVector;
 		double maxAngle = Math.toRadians(5);
@@ -438,7 +438,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	}
 	
 	/**
-	 * For 0 - 2Pi measurements, the values can just loop round and round, 
+	 * For 0 - 2Pi measurements, the values can just loop round and round,  这段代码未使用
 	 * @param index
 	 * @return
 	 */
@@ -449,7 +449,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	}
 	
 	/**
-	 * For 0 - pi measurements, the values should bounce off the start end the end. 
+	 * For 0 - pi measurements, the values should bounce off the start end the end. 这段代码未使用
 	 * @param index
 	 * @param maxBins
 	 * @return
@@ -467,7 +467,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	
 	/**
 	 * Calculate the errors on theta and phi based on the curvature of the
-	 * likelihood surface around the central bins
+	 * likelihood surface around the central bins  // 根据中心bins周围似然曲面的曲率计算θ和φ上的误差
 	 * @param thetaBin central theta bin
 	 * @param phiBin central phi bin
 	 * @return errors on theta and phi in radians. 
@@ -478,7 +478,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 			try {
 			thetaBin = Math.min(Math.max(1, thetaBin), nThetaBins-2);
 			errors[0] = getCurvature(getLLValue(thetaBin-1, phiBin, delays), getLLValue(thetaBin, phiBin, delays), 
-					getLLValue(thetaBin+1, phiBin, delays)) * thetaStep;
+					getLLValue(thetaBin+1, phiBin, delays)) * thetaStep; // 曲率乘以角度步长，代表相对于最佳角度，偏差了多少度
 			}
 			catch (Exception e) {
 				System.out.printf("Theta and Phi bins %d and %d\n", thetaBin, phiBin);
@@ -503,7 +503,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	}
 
 	private int[][] crawlPairs = {{0,0},{-1,1},{0,1},{1,1},{-1,0},{1,0},{-1,-1},{0,-1},{1,-1}};
-	public double[][] localiseByCrawl(double[] delays, long timeMillis) {
+	public double[][] localiseByCrawl(double[] delays, long timeMillis) { // 这段代码未使用
 //		long startNanos = System.nanoTime();
 //		long endNanos;
 		int nCrawlSteps = 0;
@@ -628,9 +628,9 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 //				}
 			}
 		}
-		PeakPosition2D peakResult = peakSearch.interpolatedPeakSearch(likelihoodLUT);
+		PeakPosition2D peakResult = peakSearch.interpolatedPeakSearch(likelihoodLUT); // 二维峰值搜索算法，找到似然表中峰值的位置
 		
-		double[] errors = getErrors((int) Math.round(peakResult.getBin0()), (int) Math.round(peakResult.getBin1()), delays);
+		double[] errors = getErrors((int) Math.round(peakResult.getBin0()), (int) Math.round(peakResult.getBin1()), delays); // 通过峰值位置的曲率代表error
 		endNanos = System.nanoTime();
 //		double theta = Math.toDegrees(thetaBinToAngle(thetaBin));
 //		double phi = Math.toDegrees(phiBintoAngle(phiBin));
@@ -660,7 +660,7 @@ public class MLGridBearingLocaliser2 implements BearingLocaliser {
 	
 
 	/*
-	 * Try localising using a simple bisection method
+	 * Try localising using a simple bisection method // 这段代码未使用
 	 * has advantage over crawl in that same points are often reevaluated
 	 */
 //	private int[] A, B, C;

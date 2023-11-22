@@ -209,19 +209,19 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 		if (mvdrParams.getNumBeams()>0) {
 			int locContents = LocContents.HAS_BEARING | LocContents.HAS_AMBIGUITY | LocContents.HAS_BEARINGERROR;
 			thisHasBeams = true;
-			beamDirs = new PamVector[mvdrParams.getNumBeams()];
-			int[] headings = mvdrParams.getHeadings();
-			int[] slants = mvdrParams.getSlants();
-			beamLocalisations = new BeamFormerLocalisation[mvdrParams.getNumBeams()];
+			beamDirs = new PamVector[mvdrParams.getNumBeams()]; // 创建存储单独波束方向的 PamVector 数组
+			int[] headings = mvdrParams.getHeadings(); // 获取波束的方向角数组
+			int[] slants = mvdrParams.getSlants(); // 获取波束的倾斜角数组
+			beamLocalisations = new BeamFormerLocalisation[mvdrParams.getNumBeams()]; // 创建存储单独波束位置信息的 BeamFormerLocalisation 数组
 			for (int i=0; i<mvdrParams.getNumBeams(); i++) {
-				beamDirs[i]=PamVector.fromHeadAndSlant(headings[i], slants[i]);
+				beamDirs[i]=PamVector.fromHeadAndSlant(headings[i], slants[i]); // 使用方向角和倾斜角创建 PamVector 对象
 				double beamErr = 180.;
 				if (mvdrParams.getNumBeams() > 1) {
 					if (i == 0 || i == mvdrParams.getNumBeams()-1) {
 						beamErr = Math.abs(headings[1]-headings[0]);
 					}
 					else {
-						beamErr = Math.abs(headings[i+1]-headings[i-1]) / 2.;
+						beamErr = Math.abs(headings[i+1]-headings[i-1]) / 2.; // 计算中间波束的方向角之差的一半作为波束误差
 					}
 				}
 //				beamLocalisations[i] = new BeamFormerLocalisation(null, 
@@ -242,14 +242,14 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 	 * @see beamformer.algorithms.BeamFormerAlgorithm#prepare()
 	 */
 	@Override
-	public void prepare() {
-		
+	public void prepare() {	// Prepare the algorithm. Gets called just before it starts. It's here that steering vectors, etc. should get calculated. 
+		// 计算导向矢量
 		// get a list of all channels in this channel map, and the corresponding element locations
-		channelList = PamUtils.getChannelArray(mvdrParams.getChannelMap());
+		channelList = PamUtils.getChannelArray(mvdrParams.getChannelMap()); // 获取通道映射中的所有通道列表和对应的元素位置
 		AcquisitionProcess sourceProcess = null;
 		try {
 //			sourceProcess = (AcquisitionProcess) beamProcess.getSourceProcess();
-			sourceProcess = (AcquisitionProcess) beamProcess.getFftDataSource().getSourceProcess();
+			sourceProcess = (AcquisitionProcess) beamProcess.getFftDataSource().getSourceProcess(); // 尝试获取采集进程
 		}
 		catch (ClassCastException e) {
 			String title = "Error finding Acquisition module";
@@ -278,32 +278,32 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 		long now = PamCalendar.getTimeInMillis();
 		int hydrophoneMap = 0;
 		for (int i=0; i<channelList.length; i++) {
-			int hydrophone = sourceProcess.getAcquisitionControl().getChannelHydrophone(channelList[i]);
-			elementLocs[i] = currentArray.getAbsHydrophoneVector(hydrophone, now);
-			hydrophoneMap |= 1<<hydrophone;
+			int hydrophone = sourceProcess.getAcquisitionControl().getChannelHydrophone(channelList[i]); // 获取通道对应的水听器编号
+			elementLocs[i] = currentArray.getAbsHydrophoneVector(hydrophone, now); // 获取当前时刻下水听器的绝对位置
+			hydrophoneMap |= 1<<hydrophone;         // 更新水听器映射
 		}
 		/*
 		 * Do some normalisation of those vectors. Start by making everything relative
 		 * to the average position. 
 		 */
-		PamVector arrayCenter = PamVector.mean(elementLocs);
+		PamVector arrayCenter = PamVector.mean(elementLocs);	// 计算元素位置的平均值，得到阵列中心点
 		for (int i = 0; i < channelList.length; i++) {
-			elementLocs[i] = elementLocs[i].sub(arrayCenter);
+			elementLocs[i] = elementLocs[i].sub(arrayCenter);	// 将每个元素位置向量减去阵列中心点，使其相对于平均位置
 		}
 		/*
 		 * Now get the principle axis vector of the array. 
 		 */
 		int arrayShape = arrayManager.getArrayType(hydrophoneMap); // 2 for  aline array. 
-		PamVector[] arrayAxis = arrayManager.getArrayDirection(hydrophoneMap); // will be single vector for a line array. 
+		PamVector[] arrayAxis = arrayManager.getArrayDirection(hydrophoneMap); // will be single vector for a line array. 获取阵列的主轴向量，对于线阵列来说，返回值是一个单一的向量
 		
 		// Create the beams for the beamogram.  Step through the look angles (based on the beamOGramAngles variable) and create a vector for each.  Use
 		// the same sequence number, since when processing all beams will be added together anyway.  For the element weights and frequency range, use
 		// the last index in the weights and freqRange variables (the last index = number of individual beams)
-		int[] boAngles = mvdrParams.getBeamOGramAngles();
+		int[] boAngles = mvdrParams.getBeamOGramAngles(); // 获取波束图的观察角度数组 {0，180，2步长}
 		if (thisHasABeamOGram && boAngles != null && boAngles.length >= 2) {
-			int nMainBeams = (int) ((mvdrParams.getBeamOGramAngles()[1]-mvdrParams.getBeamOGramAngles()[0])/mvdrParams.getBeamOGramAngles()[2]+1);
-			int nSecBeams = (int) ((mvdrParams.getBeamOGramSlants()[1]-mvdrParams.getBeamOGramSlants()[0])/mvdrParams.getBeamOGramSlants()[2]+1);
-			beamogramBeams = new MVDRBeam[nSecBeams][nMainBeams];
+			int nMainBeams = (int) ((mvdrParams.getBeamOGramAngles()[1]-mvdrParams.getBeamOGramAngles()[0])/mvdrParams.getBeamOGramAngles()[2]+1); // 主方向波束数量 （180-0）/2 +1=91
+			int nSecBeams = (int) ((mvdrParams.getBeamOGramSlants()[1]-mvdrParams.getBeamOGramSlants()[0])/mvdrParams.getBeamOGramSlants()[2]+1); // 次方向（斜角）波束数量 0
+			beamogramBeams = new MVDRBeam[nSecBeams][nMainBeams]; // 创建一个大小为[nSecBeams][nMainBeams]的MVDRBeam数组，用于存储波束
 			beamogramSeqMap = PamUtils.SetBit(0, beamogramNum, true);
 //			int arrayIdx = 0;
 //			if (beamDirs != null) {
@@ -321,14 +321,14 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 							elementLocs, 
 							mvdrParams.getBeamOGramFreqRange(), 
 							currentArray.getSpeedOfSound());
-				}
+				} // 计算各个角度的导向矢量 beamogramBeams
 			}
-			double[] freqBins = mvdrParams.getBeamOGramFreqRange();
+			double[] freqBins = mvdrParams.getBeamOGramFreqRange();     // 获取波束图的频率范围
 			beamOStartBin = beamProcess.frequencyToBin(freqBins[0]);
 			beamOEndBin = beamProcess.frequencyToBin(freqBins[1]);
 			
 		// Create the individual beams.  Loop through the look vectors created in the constructor.  Give each beam a unique seequence number
-		} 
+		} // 创建单个波束。循环遍历在构造函数中创建的look向量，并为每个波束分配唯一的序列号。
 		if (thisHasBeams) {
 			individBeams = new MVDRBeam[beamDirs.length];
 			for (int i=0; i<beamDirs.length; i++) {
@@ -362,12 +362,12 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			
 			// calculate the inverse CSDM for the data over the currently-specified frequency bin range
 //			this.prepNewData(fftDataUnits, beamogramBeams[0][0].getStartIdx(), beamogramBeams[0][0].getNumFFTBins()); this one calculates CSDM for entire range
-			this.prepNewData(fftDataUnits, beamOStartBin, beamOEndBin-beamOStartBin);
+			this.prepNewData(fftDataUnits, beamOStartBin, beamOEndBin-beamOStartBin); // 求解每个频点，信号协方差矩阵的逆 Rinv 维度（fftBin个ch*ch矩阵）
 			
 			// loop through the angles one beam at a time, processing the data and averaging the results
-			int numAnlgeBins = beamogramBeams[0].length;//beamProcess.getFftDataSource().getFftLength()/2;
-			int numSlantBins = beamogramBeams.length;
-			int nAllFBins = fftDataUnits[0].getFftData().length();
+			int numAnlgeBins = beamogramBeams[0].length;//beamProcess.getFftDataSource().getFftLength()/2; 获取主角度数
+			int numSlantBins = beamogramBeams.length; // 获取次角度数
+			int nAllFBins = fftDataUnits[0].getFftData().length(); // 获取总频点数
 			int nFBinsToKeep = keepFrequencyInfo ? nAllFBins : 1;
 			double[][][] beamData = new double[nFBinsToKeep][numSlantBins][numAnlgeBins];
 			/*
@@ -375,12 +375,12 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			 * is bin 0 in angle. Don't reverse it.  DG. 27.07.17
 			 * 
 			 * Multithreading. Make multiple threads for this next part, looping 
-			 * over the second (final) dimension, which is generaly the one having the 
+			 * over the second (final) dimension, which is generaly the one having the  多线程处理。为这部分代码创建多个线程，循环遍历第二个（最后一个）维度，通常这是具有最多独立波束的维度。
 			 * most separate beams. 
 			 */
 			if (nBeamOThreads > 1) {
 				for (int i = 0; i < nBeamOThreads; i++) {
-					beamThreads[i] = new Thread(new BeamOThread(fftDataUnits, beamData, i, nBeamOThreads, nAllFBins));
+					beamThreads[i] = new Thread(new BeamOThread(fftDataUnits, beamData, i, nBeamOThreads, nAllFBins)); // 多线程计算每个方位角（二维则包括方位和俯仰角） 功率值
 					beamThreads[i].start();
 				}
 				try {
@@ -397,7 +397,7 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 				for (int j=0; j<beamogramBeams.length; j++) {
 					for (int i=0; i<beamogramBeams[0].length; i++) {
 						//					ComplexArray summedData = beamogramBeams[j][i].process(Rinv);
-						ComplexArray summedData = beamogramBeams[j][i].process(Rinv, beamOStartBin, beamOEndBin-beamOStartBin,nAllFBins);
+						ComplexArray summedData = beamogramBeams[j][i].process(Rinv, beamOStartBin, beamOEndBin-beamOStartBin,nAllFBins); // 计算每个方位角（二维则包括方位和俯仰角）全频点的功率谱（复数向量）
 						/*
 						 * Do a search for NaN values here ...
 						 */
@@ -421,7 +421,7 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 								beamData[k][j][i] = summedData.magsq(k);
 							}
 							else {
-								beamData[0][j][i] += summedData.magsq(k);
+								beamData[0][j][i] += summedData.magsq(k); //计算每个方位角（二维则包括方位和俯仰角）的功率值（实数）
 							}
 						}
 					}
@@ -439,31 +439,31 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			
 			// now get the best angle and add it as a localisation. 
 			double meanLev = 0;
-			double[] aveData = newUnit.getAngle1Data(true);
+			double[] aveData = newUnit.getAngle1Data(true); // 输出avedata,是一维的方位角功率值，bins和俯仰角维度都被平均了
 			for (int i = 0; i < aveData.length; i++) {
 				meanLev += aveData[i];
 			}
 			meanLev /= aveData.length;
-			PeakPosition peakPos = peakSearch.interpolatedPeakSearch(aveData);
-			if (peakPos.getHeight()/meanLev > 2) {
-				int[] boga = mvdrParams.getBeamOGramAngles();
-				double bestAng = peakPos.getBin() * (double) boga[2] + (double) boga[0];
+			PeakPosition peakPos = peakSearch.interpolatedPeakSearch(aveData); // 使用峰值搜索算法查找峰值位置 针对一维向量（方位角的功率值）
+			if (peakPos.getHeight()/meanLev > 2) {                             // 如果峰值高度相对于平均值超过2倍，则认为是有效的峰值
+				int[] boga = mvdrParams.getBeamOGramAngles(); // 获取BeamOGram 方位角 {0， 180， 2（步长）}
+				double bestAng = peakPos.getBin() * (double) boga[2] + (double) boga[0]; // 计算最佳方位角度
 				newUnit.setLocalisation(new BeamOGramLocalisation(newUnit, mvdrParams.getChannelMap(), bestAng));
 			}
 			
 			beamOGramOutput.addPamData(newUnit);
 		}
 		
-		// if these are individual beams, loop through them one at a time and create a new BeamFormerDataUnit for each
+		// if these are individual beams, loop through them one at a time and create a new BeamFormerDataUnit for each 如果这些是单独的波束，逐个循环它们并为每个创建一个新的BeamFormerDataUnit
 		if (thisHasBeams) {
 			int iBeam = 0;
 			
-			// set the counters and calculate the inverse CSDM for the first beam
+			// set the counters and calculate the inverse CSDM for the first beam 为第一个波束计算信号协方差矩阵
 			int lastStartIdx = individBeams[0].getStartIdx();
 			int lastNumFFTBins = individBeams[0].getNumFFTBins();
 			this.prepNewData(fftDataUnits, individBeams[0].getStartIdx(), individBeams[0].getNumFFTBins());
 			
-			// loop through the beams one at a time, saving each result to the beamformer output data block
+			// loop through the beams one at a time, saving each result to the beamformer output data block 设置计数器并计算第一个波束的逆CSDM（交叉谱密度矩阵）
 			for (MVDRBeam beam : individBeams) {
 				
 				// if this beam has a different starting index or number of fft bins as the previous, recalculate the inverse CSDM
@@ -514,13 +514,13 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 		public void run() {
 			for (int j=0; j<beamogramBeams.length; j++) {
 				for (int i=firstBeamIndex; i<beamogramBeams[0].length; i+=beamIndexStep) {
-					ComplexArray summedData = beamogramBeams[j][i].process(Rinv, beamOStartBin, beamOEndBin-beamOStartBin,nFBins);
+					ComplexArray summedData = beamogramBeams[j][i].process(Rinv, beamOStartBin, beamOEndBin-beamOStartBin,nFBins); // 计算MVDR的功率谱
 					for (int k=beamOStartBin; k<beamOEndBin; k++) {
 						if (keepFrequencyInfo) {
 							beamData[k][j][i] = summedData.magsq(k);
 						}
 						else {
-							beamData[0][j][i] += summedData.magsq(k);
+							beamData[0][j][i] += summedData.magsq(k); // 计算功率值（每个角度每个频点单独）的模
 						}
 					}
 					//				aveData.set(j, summedMag/summedData.length(), 0.);
@@ -533,7 +533,7 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 	}
 
 	/**
-	 * Calculate the inverse CSDM (Rinv field) based on the current fftDataUnits.
+	 * Calculate the inverse CSDM (Rinv field) based on the current fftDataUnits. 循环每个频点，求该频点处信号协方差矩阵的逆 Rinv （fftBin*ch*ch）
 	 * 
 	 * @param fftDataUnits the new data to process
 	 * @param startIdx the fft bin to start the processing at
@@ -555,7 +555,7 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			// in the order that matches the steering vector order.
 			// Note: the Complex objects used here are from the Apache Commons Math library org.apache.commons.math3.complex.Complex,
 			// not the fftManager.Complex class
-			ArrayFieldVector<Complex> dataVec = new ArrayFieldVector<Complex>(ComplexField.getInstance(), fftDataUnits.length);
+			ArrayFieldVector<Complex> dataVec = new ArrayFieldVector<Complex>(ComplexField.getInstance(), fftDataUnits.length); // fftDataUnits.length 可以理解为通道数
 			ArrayFieldVector<Complex> dataVecConj = new ArrayFieldVector<Complex>(ComplexField.getInstance(), fftDataUnits.length);
 			for (int chan=0; chan<fftDataUnits.length; chan++) {
 				dataVec.setEntry(chan, new Complex(fftDataUnits[chanOrder[chan]].getFftData().get(startIdx+fftBin).real, fftDataUnits[chanOrder[chan]].getFftData().get(startIdx+fftBin).imag));
@@ -563,11 +563,11 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			}
 			
 			// calculate the CSDM of the FFT data
-			FieldMatrix<Complex> R = dataVec.outerProduct(dataVecConj);
+			FieldMatrix<Complex> R = dataVec.outerProduct(dataVecConj); // 计算的CSDM 是协方差矩阵（Cross-Spectral Density Matrix），outerProduct计算外积 （1*ch） x （1*ch） = （ch*ch）=R
 			
 			// add diagonal loading to the matrix.  First calculate the trace value (the sum of the diagonal components)
 			// and divide that by the square of the number of channels.  Add that to the diagonal elements in the matrix R
-			Complex traceVal = R.getTrace();
+			Complex traceVal = R.getTrace(); // 对协方差矩阵，对角加载操作，对角元素的加载量为 迹值（对角线元素的总和）除以通道数的平方。
 			Complex noiseVal = traceVal.divide(Math.pow(fftDataUnits.length,2));
 			for (int chan=0; chan<fftDataUnits.length; chan++) {
 				R.addToEntry(chan, chan, noiseVal);
@@ -579,8 +579,8 @@ public class MVDRalgorithm implements BeamFormerAlgorithm {
 			
 			
 			// calculate the inverse matrix for this fft bin
-			FieldDecompositionSolver<Complex> solver = new FieldLUDecomposition<Complex>(R).getSolver();
-			FieldMatrix<Complex> singleRinv = MatrixUtils.createFieldMatrix(ComplexField.getInstance(), R.getRowDimension(), R.getColumnDimension());
+			FieldDecompositionSolver<Complex> solver = new FieldLUDecomposition<Complex>(R).getSolver(); // 通过getSolver() 方法获取到 LU 分解对象的求解器，用于后续矩阵求逆
+			FieldMatrix<Complex> singleRinv = MatrixUtils.createFieldMatrix(ComplexField.getInstance(), R.getRowDimension(), R.getColumnDimension()); // 创建一个空的复数矩阵存储逆矩阵运算结果 
 			try {
 				singleRinv = solver.getInverse();
 

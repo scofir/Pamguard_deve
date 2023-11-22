@@ -620,7 +620,7 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 		if (nPhones <= 0) {
 			return null;
 		}
-		PamVector[] arrayVectors = getArrayVectors(array, phones);
+		PamVector[] arrayVectors = getArrayVectors(array, phones); // 得到多个三维坐标
 		int arrayType = getArrayShape(array, phones);
 		switch(arrayType) {
 		case ARRAY_TYPE_POINT:
@@ -638,14 +638,14 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 	private PamVector[] getLineArrayVector(PamVector[] arrayVectors) {
 		// we know they are in a line, so just take the first two. 
 		PamVector[] vectors = new PamVector[1];
-		vectors[0] = arrayVectors[1].sub(arrayVectors[0]);
+		vectors[0] = arrayVectors[1].sub(arrayVectors[0]); // 第二个水听器三维坐标减去第一个水听器三维坐标得到一个向量
 		// want to line up along the positive direction of an axis if at all
 		// possible. 
-		int ax = vectors[0].getPrincipleAxis();
+		int ax = vectors[0].getPrincipleAxis(); // 寻找该向量角度最小的坐标轴xyz索引
 		if (vectors[0].dotProd(PamVector.getCartesianAxes(ax)) < 0) {
-			vectors[0] = vectors[0].times(-1);
+			vectors[0] = vectors[0].times(-1); // 使起指向正方向
 		}
-		vectors[0] = vectors[0].getUnitVector();
+		vectors[0] = vectors[0].getUnitVector(); // 返回归一化的向量，即方向向量，将此方向当作线阵的新坐标轴
 		return vectors;
 	}
 
@@ -661,11 +661,11 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 		}
 		// need to find the direction vector for the plane. 
 		// can do this by finding any non zero vector product.
-		PamVector planePerpendicular = null;;
+		PamVector planePerpendicular = null;; // 可以理解为垂直与平面的法线
 		for (int i = 0; i < nPairs; i++) {
 			for (int j = (i+1); j < nPairs; j++) {
-				if (vectorPairs[i].isParallel(vectorPairs[j]) == false) {
-					planePerpendicular = vectorPairs[i].vecProd(vectorPairs[j]);
+				if (vectorPairs[i].isParallel(vectorPairs[j]) == false) { // 判断两个向量是否共线
+					planePerpendicular = vectorPairs[i].vecProd(vectorPairs[j]); // 计算所有水听器位置向量对的笛卡尔积,找出其中任意一个非零的作为平面法线方向
 					break;
 				}
 			}
@@ -673,11 +673,11 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 				break;
 			}
 		}
-		if (planePerpendicular == null) {
-			planePerpendicular = PamVector.getZAxis().clone();			
+		if (planePerpendicular == null) { // 如果无法找到不平行的向量对，则默认选择 Z 轴作为垂直向量。
+			planePerpendicular = PamVector.getZAxis().clone();		
 		}
 
-		//		find the closest pair to each of the three axis. 
+		//		find the closest pair to each of the three axis. 分别找到离3个笛卡尔坐标轴角度最小的向量
 		int[] closestPair = new int[3];		
 		PamVector axis;
 		double closest;
@@ -696,7 +696,7 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 				}
 			}
 		}
-		// try to line up the first vector on the y axis, then x, then z
+		// try to line up the first vector on the y axis, then x, then z  试着在y轴上对齐第一个向量，然后是x轴，再是z轴
 		int startPair = -1;
 		if (closestPair[1] >= 0) {
 			startPair = closestPair[1];
@@ -710,19 +710,19 @@ public class ArrayManager extends PamControlledUnit implements PamSettings, PamO
 		if (startPair < 0) {
 			return null;
 		}
-		vectors[0] = vectorPairs[startPair];
+		vectors[0] = vectorPairs[startPair]; // 找到离原始Y轴最近的向量，将其作为相对坐标系的第一个相对坐标轴
 		if (vectors[0].angle(PamVector.getCartesianAxes(closestAxis[startPair])) > Math.PI/2) {
 			vectors[0] = vectors[0].times(-1);
 		}
-		// second vector must be perpendicular to first one and also 
+		// second vector must be perpendicular to first one and also  第二个相对坐标轴，应该要与法线且和第一个相对坐标轴垂直
 		// to the plane perpendicular.
 		vectors[1] = vectors[0].vecProd(planePerpendicular);
 		int closestAx = vectors[1].getPrincipleAxis();
 		if (vectors[1].angle(PamVector.getCartesianAxes(closestAx)) > Math.PI/2) {
 			vectors[1] = vectors[1].times(-1);
 		}
-		vectors[0] = vectors[0].getUnitVector();
-		vectors[1] = vectors[1].getUnitVector();
+		vectors[0] = vectors[0].getUnitVector(); // 第一个相对坐标轴，最靠近yAxis的向量
+		vectors[1] = vectors[1].getUnitVector(); // 第二个相对坐标轴，与第一个相对坐标轴垂直，且与平面法线垂直的向量
 
 
 		return vectors;

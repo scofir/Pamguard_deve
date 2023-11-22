@@ -212,7 +212,7 @@ public class PamVector implements Serializable, Cloneable, PamCoordinate, Manage
 	/**
 	 * Add any number of vectors together in quadrature. 
 	 * @param pamVectors list of vectors
-	 * @return sum of all vectors. 
+	 * @return sum of all vectors.  将多个向量进行平方和的操作，并对结果进行平方根处理，从而计算出这些向量的合成向量
 	 */
 	public static PamVector addQuadrature(PamVector... pamVectors) {
 		PamVector vec = new PamVector();
@@ -308,7 +308,7 @@ public class PamVector implements Serializable, Cloneable, PamCoordinate, Manage
 	}
 	
 	/**
-	 * Get the unit vector, or if the vector is zero, return 
+	 * Get the unit vector, or if the vector is zero, return 获取当前向量的单位向量
 	 * the zero vector (0,0,0). 
 	 * @return the unit vector
 	 */
@@ -317,7 +317,7 @@ public class PamVector implements Serializable, Cloneable, PamCoordinate, Manage
 		if (sz == 0) {
 			return clone();
 		}
-		return times(1./sz);
+		return times(1./sz);//times() 方法表示将当前向量的每个分量与给定的因子相乘，并返回结果向量。这里的给定因子是 1./sz，即将向量的每个分量除以向量的长度 sz，从而得到单位向量。
 	}
 	
 	/**
@@ -415,7 +415,7 @@ public class PamVector implements Serializable, Cloneable, PamCoordinate, Manage
 	/**
 	 * Vector or cross product of two vectors. 
 	 * @param vec
-	 * @return vector product of this and vec.
+	 * @return vector product of this and vec. 向量叉积，用于求两向量所在平面的法向量
 	 */
 	public PamVector vecProd(PamVector vec) {
 		PamVector newVec = new PamVector();

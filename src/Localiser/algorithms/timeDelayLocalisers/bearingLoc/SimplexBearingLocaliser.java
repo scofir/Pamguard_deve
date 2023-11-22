@@ -19,10 +19,10 @@ import pamMaths.PamVector;
 
 public class SimplexBearingLocaliser implements BearingLocaliser {
 	private int arrayType;
-	private Matrix hydrophoneVectors;
-	private Matrix hydrophoneErrorVectors;
-	private Matrix hydrophoneUnitVectors;
-	private double[] hydrophoneSpacing;
+	private Matrix hydrophoneVectors;  // 水听器向量矩阵
+	private Matrix hydrophoneErrorVectors;  // 水听器误差向量矩阵
+	private Matrix hydrophoneUnitVectors;  // 水听器单位向量矩阵
+	private double[] hydrophoneSpacing; // 水听器间距数组
 	private PamArray currentArray;
 	private int hydrophoneBitMap;
 	private long timeMillis;
@@ -31,7 +31,7 @@ public class SimplexBearingLocaliser implements BearingLocaliser {
 	private QRDecomposition qrHydrophones;
 	private double[] startValue = {0, Math.PI/2};
 	private double[] firstStep;
-	private NelderMead optimiser;
+	private NelderMead optimiser;  // 优化器对象
 
 	public SimplexBearingLocaliser(int hydrophoneBitMap, long timeMillis, double timingError) {
 		this.hydrophoneBitMap = hydrophoneBitMap;
@@ -50,18 +50,18 @@ public class SimplexBearingLocaliser implements BearingLocaliser {
 		currentArray = arrayManager.getCurrentArray();
 		arrayType = arrayManager.getArrayShape(currentArray, hydrophoneBitMap);
 
-		arrayAxis = arrayManager.getArrayDirections(currentArray, hydrophoneBitMap);
+		arrayAxis = arrayManager.getArrayDirections(currentArray, hydrophoneBitMap); // 利用多水听器位置信息计算出线阵或平面阵的相对坐标系,方便后续处理如旋转到绝对坐标系等操作
 		/*  This will actually rotate everything so that x is the principle axis even 
 		 *  though y will nearly always the be principle axis for forward towing hydrophones, 
 		 *  but this doesn't matter. When it comes to the theta and phi calculations, make
 		 *  sure that they are calculated relative to the x axis and the xy plane.  
 		 */
-		PamVector[] rotVectors = Arrays.copyOf(arrayAxis, 3);
+		PamVector[] rotVectors = Arrays.copyOf(arrayAxis, 3); // 复制相对坐标系并确保有三个维度，如平面阵arrayAxis={[a,b,c],[a1,b1,c1]},则rotVectors={[a,b,c],[a1,b1,c1],[0,0,0]}
 		// may need to work out the third vector.
 		if (arrayType == ArrayManager.ARRAY_TYPE_PLANE) {
-			rotVectors[2] = rotVectors[0].vecProd(rotVectors[1]);
+			rotVectors[2] = rotVectors[0].vecProd(rotVectors[1]); // 求平面的法线向量，作为新坐标系的z轴
 		}
-		Matrix rotMatrix = PamVector.arrayToMatrix(rotVectors);
+		Matrix rotMatrix = PamVector.arrayToMatrix(rotVectors); // 转换为矩阵
 		
 		int nHyd = arrayElements.length;
 		int nDelay = (nHyd*(nHyd-1))/2;
@@ -75,7 +75,7 @@ public class SimplexBearingLocaliser implements BearingLocaliser {
 			PamVector vi = currentArray.getAbsHydrophoneVector(i, timeMillis);
 			for (int j = i+1; j <nHyd; j++) {
 				PamVector vj = currentArray.getAbsHydrophoneVector(j, timeMillis);
-				PamVector v = vj.sub(vi).rotate(rotMatrix);
+				PamVector v = vj.sub(vi).rotate(rotMatrix); // 从原始坐标系旋转到新的坐标系内
 				PamVector errorVec = currentArray.getSeparationErrorVector(i, j, timeMillis).rotate(rotMatrix);
 				hydrophoneSpacing[iRow] = v.norm();
 				PamVector uv = v.getUnitVector();

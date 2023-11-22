@@ -214,7 +214,7 @@ public class PamUtils {
 	}
 	
 	/**
-	 * Make a channel bitmap from a list. 
+	 * Make a channel bitmap from a list. ChannelList若是{2，3，4} ，map=28对应二进制11100，表示0和1水听器未使用
 	 * @param channelList channel list
 	 * @return bitmap of channels. 
 	 */

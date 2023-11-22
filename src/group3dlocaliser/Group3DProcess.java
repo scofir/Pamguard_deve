@@ -208,7 +208,7 @@ public class Group3DProcess extends PamProcess implements DetectionGroupMonitor 
 			cpuMonitor.start();
 			// groupLocalisation =
 			// localiserAlgorithm3D.process(detectionGroupedSet.getGroup(i));
-			abstractLocalisation = localiserAlgorithm3D.runModel(group3dDataUnits[i], null, false);
+			abstractLocalisation = localiserAlgorithm3D.runModel(group3dDataUnits[i], null, false); // 运行关于TDOA的定位算法入口
 			if (abstractLocalisation == null) {
 				System.out.println("Group 3D process null localisation from " + localiserAlgorithm3D.getName());
 				continue;

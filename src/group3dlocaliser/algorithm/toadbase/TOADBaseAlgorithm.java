@@ -128,7 +128,7 @@ abstract public class TOADBaseAlgorithm extends LocaliserAlgorithm3D {
 			return null;
 		}
 
-		return processTOADs(groupDataUnit, geometry, toadInformation);
+		return processTOADs(groupDataUnit, geometry, toadInformation); // 此处进行定位算法处理
 	}
 
 	/**

@@ -22,12 +22,12 @@ public class BeamGroupProcess {
 	private BeamAlgorithmProvider provider;
 	private BeamFormerAlgorithm beamFormerAlgorithm;
 	private BeamAlgorithmParams parameters;
-	private int groupChannelMap;
-	private int currentChanMap;
+	private int groupChannelMap; // 通道映射，表示通道分组的位图
+	private int currentChanMap; // 当前通道映射，用于跟踪当前已处理的通道
 	private int nextChanIndex = 0;
 	private int firstSeqNum = 0;
-	private int numChannels;
-	private FFTDataUnit[] channelFFTUnits;
+	private int numChannels; // 通道数量，表示通道分组中的通道数
+	private FFTDataUnit[] channelFFTUnits; // FFTDataUnit数组，用于存储通道分组的FFT数据单元
 	private int arrayShape;
 	private PamVector[] arrayMainAxes;
 	
@@ -65,11 +65,11 @@ public class BeamGroupProcess {
 	 * Process FFT data - will group up into correct channel groups
 	 * @param fftDataUnit
 	 */
-	public void process(FFTDataUnit fftDataUnit) {
+	public void process(FFTDataUnit fftDataUnit) { // 读取数据存入到该分组的channel中
 		int chMap = fftDataUnit.getChannelBitmap();
 		channelFFTUnits[nextChanIndex++] = fftDataUnit;
 		currentChanMap |= chMap;
-		if (nextChanIndex == numChannels) {
+		if (nextChanIndex == numChannels) { // 当索引等于该分组预设的通道数，算法才会开始处理
 			beamFormerAlgorithm.process(channelFFTUnits);
 			nextChanIndex = 0;
 		}

@@ -69,23 +69,23 @@ public class WrappedBeamFormAlgorithm extends BaseFFTBearingAlgorithm {
 		shortAlgoName = wrappedBeamFormAlgorithmProvider.getStaticProperties().getShortName();
 		peakSearch = new PeakSearch(true);
 		beamAlgorithmParams = ((WrappedBeamFormParams) algorithmParams).getBeamAlgorithmParams();
-		beamAlgorithmParams.setNumBeamogram(1);
+		beamAlgorithmParams.setNumBeamogram(1); // 设置波束图的数量为1
 
-		int[] slants = beamAlgorithmParams.getBeamOGramSlants();
+		int[] slants = beamAlgorithmParams.getBeamOGramSlants(); // 获取波束图的倾角数组（次要角度） {0, 0, 1}{初始最小角度，初始最大角度，扫描步长}
 		nDimensions = 1;
 		if (slants != null && slants.length >= 2) {
-			if (slants[1] > slants[0]) {
+			if (slants[1] > slants[0]) { // 判断第二个倾角是否大于第一个倾角
 				nDimensions = 2;
 			}
 		}
 		if (nDimensions == 1) {
-			locContents = LocContents.HAS_BEARING | LocContents.HAS_AMBIGUITY;
+			locContents = LocContents.HAS_BEARING | LocContents.HAS_AMBIGUITY; // 设置定位内容，包括定位结果的角度和模糊度信息
 		}
 		else {
 			locContents = LocContents.HAS_BEARING;
 		}
 
-		ArrayManager arrayManager = ArrayManager.getArrayManager();
+		ArrayManager arrayManager = ArrayManager.getArrayManager(); // 水听器阵列设置
 		PamArray currentArray = arrayManager.getCurrentArray();
 		groupHydrophones = beamAlgorithmParams.getChannelMap();
 		groupHydrophones = getFftSourceData().getChannelListManager().channelIndexesToPhones(groupHydrophones);
@@ -97,11 +97,11 @@ public class WrappedBeamFormAlgorithm extends BaseFFTBearingAlgorithm {
 
 	@Override
 	public BearingLocalisation processFFTData(PamDataUnit pamDataUnit, BearingAlgorithmGroup beamGroup,
-			FFTDataList fftDataList) {
+			FFTDataList fftDataList) {    // 重写父类方法，处理FFT数据，并返回定位结果
 		ArrayList<FFTDataUnit> fftDataUnits = fftDataList.getFftDataUnits();
 		if (fftDataUnits == null || fftDataUnits.size() == 0) {
 			return null;
-		}
+		}    // 重置FFT存储和BeamOGram
 		beamGroupProcess.resetFFTStore();
 		wrappedBeamFormerProcess.getCollatedBeamOGram().clear();
 		beamGroupProcess.getBeamFormerBaseProcess().getBeamOGramOutput().clearAll();
@@ -131,7 +131,7 @@ public class WrappedBeamFormAlgorithm extends BaseFFTBearingAlgorithm {
 			TFContourProvider cp = (TFContourProvider) pamDataUnit;
 			contourData = cp.getTFContourData();
 			if (contourData != null) {
-				nContourCont = contourData.getContourTimes().length;
+				nContourCont = contourData.getContourTimes().length; // 获取波形数据的数量
 				lowF = contourData.getLowFrequency();
 				highF = contourData.getHighFrequecy();
 				// check if it's simple to match the contour info with the FFT data:
@@ -144,19 +144,19 @@ public class WrappedBeamFormAlgorithm extends BaseFFTBearingAlgorithm {
 
 		int iGroupCount = 0;
 		int firstChannel = fftDataUnits.get(0).getChannelBitmap();
-		for (FFTDataUnit fftDataUnit:fftDataUnits) {
+		for (FFTDataUnit fftDataUnit:fftDataUnits) {// 检查fftDataUnit的通道位图与beamGroup的通道映射进行按位与操作
 			if ((fftDataUnit.getChannelBitmap() & beamGroup.channelMap) == 0) {
-				continue;
+				continue; // 如果结果为0，表示fftDataUnit的通道位图与beamGroup的通道映射没有交集，跳过当前循环，继续下一个fftDataUnit
 			}
 			fftDataUnit.setParentDataBlock(getFftSourceData());
 			if (iGroupCount < nContourCont && fftDataUnit.getChannelBitmap() == firstChannel) {
 				int binLo = frequencyToBin(lowF[iGroupCount]);
 				int binHi = frequencyToBin(highF[iGroupCount])+1;
 				binHi = Math.min(binHi, fftDataUnit.getFftData().length());
-				beamGroupProcess.getBeamFormerAlgorithm().setFrequencyBinRange(binLo, binHi);
+				beamGroupProcess.getBeamFormerAlgorithm().setFrequencyBinRange(binLo, binHi); // 设定频率范围
 				iGroupCount++;
 			}
-			beamGroupProcess.process(fftDataUnit);
+			beamGroupProcess.process(fftDataUnit); // **************** 处理FFT数据 ********可能fftDataUnit只存了单通道的数据******************
 		}
 
 		int n = wrappedBeamFormerProcess.getCollatedBeamOGram().size();
@@ -165,7 +165,7 @@ public class WrappedBeamFormAlgorithm extends BaseFFTBearingAlgorithm {
 		}
 
 		double[] angles;
-		switch (nDimensions) {
+		switch (nDimensions) { // 等于2代表有倾斜角
 		case 1:
 			angles = interpret1DBeamOGram(wrappedBeamFormerProcess.getCollatedBeamOGram());
 			break;

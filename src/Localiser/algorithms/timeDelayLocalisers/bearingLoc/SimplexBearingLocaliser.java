@@ -19,10 +19,10 @@ import pamMaths.PamVector;
 
 public class SimplexBearingLocaliser implements BearingLocaliser {
 	private int arrayType;
-	private Matrix hydrophoneVectors;
-	private Matrix hydrophoneErrorVectors;
-	private Matrix hydrophoneUnitVectors;
-	private double[] hydrophoneSpacing;
+	private Matrix hydrophoneVectors;  // 水听器向量矩阵
+	private Matrix hydrophoneErrorVectors;  // 水听器误差向量矩阵
+	private Matrix hydrophoneUnitVectors;  // 水听器单位向量矩阵
+	private double[] hydrophoneSpacing; // 水听器间距数组
 	private PamArray currentArray;
 	private int hydrophoneBitMap;
 	private long timeMillis;
@@ -31,7 +31,7 @@ public class SimplexBearingLocaliser implements BearingLocaliser {
 	private QRDecomposition qrHydrophones;
 	private double[] startValue = {0, Math.PI/2};
 	private double[] firstStep;
-	private NelderMead optimiser;
+	private NelderMead optimiser;  // 优化器对象
 
 	public SimplexBearingLocaliser(int hydrophoneBitMap, long timeMillis, double timingError) {
 		this.hydrophoneBitMap = hydrophoneBitMap;
@@ -56,7 +56,7 @@ public class SimplexBearingLocaliser implements BearingLocaliser {
 		 *  but this doesn't matter. When it comes to the theta and phi calculations, make
 		 *  sure that they are calculated relative to the x axis and the xy plane.  
 		 */
-		PamVector[] rotVectors = Arrays.copyOf(arrayAxis, 3);
+		PamVector[] rotVectors = Arrays.copyOf(arrayAxis, 3); // 看不懂具体如何操作
 		// may need to work out the third vector.
 		if (arrayType == ArrayManager.ARRAY_TYPE_PLANE) {
 			rotVectors[2] = rotVectors[0].vecProd(rotVectors[1]);

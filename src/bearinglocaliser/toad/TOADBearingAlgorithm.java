@@ -42,7 +42,7 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 	private int groupChannels, groupHydrophones;
 	private int arrayShape;
 	private int nChannels;
-	private int nPairs;
+	private int nPairs; // 两个不同阵元的组合数
 	private ComplexArray[] pairedConjugates;
 	private Correlations correlations = new Correlations();
 	private BearingLocaliser bearingLocaliser;
@@ -86,8 +86,8 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 		bearingLocaliser = BearingLocaliserSelector.createBearingLocaliser(groupHydrophones, timingError);
 		if (bearingLocaliser instanceof MLLineBearingLocaliser2) {
 			TOADBearingParams tbp = (TOADBearingParams) algorithmParams;
-			int[] thetaDeg = tbp.getBearingHeadings();
-			int[] phiDeg = tbp.getBearingSlants();
+			int[] thetaDeg = tbp.getBearingHeadings(); // 方位角
+			int[] phiDeg = tbp.getBearingSlants(); // 俯仰角
 			double[] theta = {Math.toRadians(thetaDeg[0]), Math.toRadians(thetaDeg[1]), Math.toRadians(thetaDeg[2])};
 			double[] phi = {0., 0., 0.};
 			((MLLineBearingLocaliser2) bearingLocaliser).setAnalysisAngles(theta, phi);
@@ -101,7 +101,7 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 			((MLGridBearingLocaliser2) bearingLocaliser).setAnalysisAngles(theta, phi);
 		}
 		maxDelaySeconds = ArrayManager.getArrayManager().getCurrentArray().getMaxPhoneSeparation(groupHydrophones, PamCalendar.getTimeInMillis()) / 
-				ArrayManager.getArrayManager().getCurrentArray().getSpeedOfSound();
+				ArrayManager.getArrayManager().getCurrentArray().getSpeedOfSound(); // 阵元间最大延迟 
 	}
 
 	@Override
@@ -114,18 +114,18 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 		int fftLen = getFftSourceData().getFftLength(); 
 		checkFFTAllocation(fftLen);
 		zeroComplexData(fftLen/2); // only need to zero the first half
-		ComplexArray[] fftGroup = new ComplexArray[nChannels];
+		ComplexArray[] fftGroup = new ComplexArray[nChannels]; // 多通道fft复数数据
 		/**
 		 * Set the frequency range for analysis
 		 */
 		int bin1 = 0, bin2 = fftLen/2;
 		double[] fRange = pamDataUnit.getFrequency();
 		if (fRange != null && fRange.length >= 2) {
-			int[] binRange = frequencyToBin(fRange);
+			int[] binRange = frequencyToBin(fRange); // 有效频率范围
 			bin1 = binRange[0];
 			bin2 = binRange[1];
 		}
-		int nChannelGroups = fftDataUnits.size() / nChannels;
+		int nChannelGroups = fftDataUnits.size() / nChannels; // 通道组数
 		/*
 		 * Now see if the data unit has more detailed contour information that
 		 * we might use ...
@@ -136,7 +136,7 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 			TFContourProvider cp = (TFContourProvider) pamDataUnit;
 			contourData = cp.getTFContourData();
 			if (contourData != null) {
-				nContourCont = contourData.getContourTimes().length;
+				nContourCont = contourData.getContourTimes().length; // 可能是时域波形的时间点数量（毫秒）
 				// check if it's simple to match the contour info with the FFT data:
 				//				int nFFT = fftDataList.size() / PamUtils.getNumChannels(beamGroup.channelMap);
 				//				System.out.printf("Contour with %d slices for %d FFT datas dt1 = %d\n", 
@@ -151,17 +151,17 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 		int maxBin2 = 0;
 		for (FFTDataUnit fftDataUnit:fftDataUnits) {
 			int iPos = PamUtils.getChannelPos(PamUtils.getSingleChannel(fftDataUnit.getChannelBitmap()), groupChannels);
-			fftGroup[iPos] = fftDataUnit.getFftData();
+			fftGroup[iPos] = fftDataUnit.getFftData(); // 将所有通道的fftdata存入fftgroup后，开始处理
 			if (iPos == fftGroup.length-1) {
 				// time to process...
-				// get the sum o fcontent of each fft in the group for scaling...
+				// get the sum of content of each fft in the group for scaling...
 				double[] fftScale = new double[nChannels];
 				for (int i = 0; i < nChannels; i++) {
-					fftScale[i] = ComplexArray.sumSquared(fftGroup[i].getData());
+					fftScale[i] = ComplexArray.sumSquared(fftGroup[i].getData()); // 所有复数数据求和sum += img*img + real*real
 				}
 				
 				if (iGroupCount < nContourCont) {
-					bin1 = frequencyToBin(contourData.getLowFrequency()[iGroupCount])-1;
+					bin1 = frequencyToBin(contourData.getLowFrequency()[iGroupCount])-1; // 取每个时间点(ms)的频率范围
 					bin2 = frequencyToBin(contourData.getHighFrequecy()[iGroupCount])+2;
 					bin1 = Math.max(bin1, 0);
 					bin2 = Math.min(bin2, fftDataUnit.getFftData().length());
@@ -189,8 +189,8 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 						for (int ir = bin1*2, ii = ir+1; ir < bin2*2; ir+=2, ii+=2) {
 							pairedScales[0] += a1[ir]*a1[ir]+a1[ii]*a1[ii];
 							pairedScales[1] += a2[ir]*a2[ir]+a2[ii]*a2[ii];
-							ap[ir] += (a1[ir]*a2[ir]+a1[ii]*a2[ii]);///scale;
-							ap[ii] += (-a1[ir]*a2[ii]+a1[ii]*a2[ir]);///scale;
+							ap[ir] += (a1[ir]*a2[ir]+a1[ii]*a2[ii]);///scale; 两两通道的复共轭乘的实部
+							ap[ii] += (-a1[ir]*a2[ii]+a1[ii]*a2[ir]);///scale; 两两通道的复共轭乘的虚部
 						}
 					}
 				}
@@ -199,26 +199,26 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 		// now fill in all the conjugate pairs in the back half of the arrays and invert. 
 		double[] delays = new double[nPairs];
 		float sampleRate = getFftSourceData().getSampleRate();
-		double[] maxDelays = correlations.getMaxDelays(sampleRate, groupHydrophones, pamDataUnit.getTimeMilliseconds());
+		double[] maxDelays = correlations.getMaxDelays(sampleRate, groupHydrophones, pamDataUnit.getTimeMilliseconds()); // 获得最大延迟数组
 //		System.out.printf("Group delays: ");
 		double scale1 = 0, scale2 = 0;
 		for (int i = 0; i < nPairs; i++) {
 			ap = pairedConjugates[i].getData();
 			double normScale = Math.sqrt(pairedConjugateScales[i][0]*pairedConjugateScales[i][1])*2;
-			for (int ir1 = minBin1*2, im1 = ir1+1, ir2 = ap.length-minBin1*2-2, im2 = ir2+1; ir1 < maxBin2*2; ir1+=2, im1+=2, ir2-=2, im2-=2) {
-				ap[ir1]/=normScale;
-				ap[im1]/=normScale;
-				ap[ir2] = ap[ir1];
+			for (int ir1 = minBin1*2, im1 = ir1+1, ir2 = ap.length-minBin1*2-2, im2 = ir2+1; ir1 < maxBin2*2; ir1+=2, im1+=2, ir2-=2, im2-=2) {// 对频率范围内的每个bin进行处理
+				ap[ir1]/=normScale; // 归一化实部
+				ap[im1]/=normScale; // 归一化虚部
+				ap[ir2] = ap[ir1];  // 对称填充 ，为后续ifft做准备
 				ap[im2] = -ap[im1];
 			}
-			correlations.getFastFFT().ifft(pairedConjugates[i], fftLen);
-			double[] peakPos = correlations.getInterpolatedPeak(pairedConjugates[i], 1, maxDelays[i]);
-			delays[i] = (peakPos[0]) / sampleRate;
+			correlations.getFastFFT().ifft(pairedConjugates[i], fftLen); // IFFT
+			double[] peakPos = correlations.getInterpolatedPeak(pairedConjugates[i], 1, maxDelays[i]); // 获取峰值位置以及高度
+			delays[i] = (peakPos[0]) / sampleRate; // 将峰值位置转换为延迟值，并存储到延迟数组中
 //			System.out.printf(", %3.3f", peakPos[0]);
 		}
 //		System.out.printf("\n");
-		double[][] locBearings = bearingLocaliser.localise(delays, pamDataUnit.getTimeMilliseconds());
-
+		double[][] locBearings = bearingLocaliser.localise(delays, pamDataUnit.getTimeMilliseconds()); // 进行方向(水平角，俯仰角，弧度形式)定位 theta, phi(in row 1) and their estimated errors(in row 2) all in radians. 
+																							//输入delays后，存在多种方式 localise
 //		if (pamDataUnit.getDurationInMilliseconds() > 300) {
 //			Debug.out.printf("TOAD Primary angle for UID %d = %3.1f\n", pamDataUnit.getUID(), Math.toDegrees(locBearings[0][0]));
 //		}
@@ -235,10 +235,10 @@ public class TOADBearingAlgorithm extends BaseFFTBearingAlgorithm {
 //			locBearings[0][0] = Math.PI/2-locBearings[0][0];
 //		}
 
-		PamVector[] arrayAxis = bearingLocaliser.getArrayAxis();
-		double[] arrayAngles = PamVector.getMinimalHeadingPitchRoll(arrayAxis);
+		PamVector[] arrayAxis = bearingLocaliser.getArrayAxis(); // 获取阵列坐标轴
+		double[] arrayAngles = PamVector.getMinimalHeadingPitchRoll(arrayAxis); // 获取阵列坐标轴的方位角
 		BearingLocalisation bl = new BearingLocalisation(pamDataUnit, algoName, 
-				LocContents.HAS_BEARING, groupHydrophones, locBearings[0], locBearings[1], arrayAngles);
+				LocContents.HAS_BEARING, groupHydrophones, locBearings[0], locBearings[1], arrayAngles); // 把所有信息新建成BearingLocalisation对象
 		bl.setSubArrayType(arrayShape);
 		bl.setArrayAxis(arrayAxis);
 		pamDataUnit.setLocalisation(bl);

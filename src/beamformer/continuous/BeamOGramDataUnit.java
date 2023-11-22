@@ -97,7 +97,7 @@ public class BeamOGramDataUnit extends DataUnit2D implements AcousticDataUnit {
 	 * @param average average the data (data are summed if this is false)
 	 * @return a two dimensional array of data [angle2][Angle1]
 	 */
-	public double[][] getAngleAngleData(boolean average) {
+	public double[][] getAngleAngleData(boolean average) { // 频点维度的压缩，计算平均值
 		int nFBins = getNFrequencyBins();
 		if (nFBins == 0) {
 			return null;
@@ -141,7 +141,7 @@ public class BeamOGramDataUnit extends DataUnit2D implements AcousticDataUnit {
 			double[] data = new double[nA1];
 			for (int i2 = 0; i2 < nA2; i2++) {
 				for (int i1 = 0; i1 < nA1; i1++) {
-					data[i1] += angleAngleData[i2][i1] * scale;
+					data[i1] += angleAngleData[i2][i1] * scale; // 对次要角度（俯仰角）进行压缩，得到一维的方向角功率值数据
 				}
 			}
 			return data;

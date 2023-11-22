@@ -619,7 +619,7 @@ public class PamArray implements Serializable, Cloneable, ManagedParameters {
 	 * @param timeMillis the current time in milliseconds
 	 * @return vector representing components of error in each direction. 
 	 */
-	public PamVector getSeparationErrorVector(int a1, int a2, long timeMillis) {
+	public PamVector getSeparationErrorVector(int a1, int a2, long timeMillis) { // 以矢量的形式获取两个水听器之间的间距误差。
 		Hydrophone h1 = getHydrophone(a1, timeMillis);
 		Hydrophone h2 = getHydrophone(a2, timeMillis);
 		PamVector e1 = new PamVector(h1.getCoordinateErrors());
@@ -1219,7 +1219,7 @@ public class PamArray implements Serializable, Cloneable, ManagedParameters {
 	 * @param timeMilliseconds
 	 * @return
 	 */
-	public Streamer getStreamerData(int streamerIndex, long timeMilliseconds) {
+	public Streamer getStreamerData(int streamerIndex, long timeMilliseconds) { // 根据给定的时间和流数据索引，获取与之对应的流数据信息。
 		if (streamerIndex < 0 || streamerIndex >= streamers.size()) {
 			return null;
 		}
